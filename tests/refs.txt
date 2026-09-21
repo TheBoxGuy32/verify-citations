@@ -1,0 +1,15 @@
+# One reference per line. Format: <expected verdict> | <expected status or -> | <reference>
+# Expected verdicts: match, match-year-differs, no-match, possible-match. Status: retracted or -
+match | - | Bishop, S. (2019) Managing visibility on YouTube through algorithmic gossip. New Media & Society, 21(11-12), 2589-2606.
+match | - | Abidin, C. (2016) Visibility labour. Media International Australia, 161(1), 86-100. doi:10.1177/1329878X16665177
+match | - | Duffy, B. E. (2017) (Not) Getting Paid to Do What You Love. Yale University Press.
+match | - | Cunningham, S. and Craig, D. (2019) Social Media Entertainment: The New Intersection of Hollywood and Silicon Valley. NYU Press.
+match-year-differs | - | Srnicek, N. (2017) Platform Capitalism. Cambridge: Polity.
+match-year-differs | - | Poell, T., Nieborg, D. and Duffy, B.E. (2022) Platforms and Cultural Production. Polity.
+match | - | Heather Latimer, "Bio-Reproductive Futurism: Bare Life and the Pregnant Refugee in Alfonso Cuarón's Children of Men," Social Text 29, no. 3 (2011): 51–72.
+match | - | 1. Bishop S. Managing visibility on YouTube through algorithmic gossip. New Media & Society. 2019;21(11-12):2589-2606.
+match-year-differs | - | Srnicek, Nick. Platform Capitalism. Cambridge: Polity, 2017.
+match-year-differs | - | [4] S. Cunningham and D. Craig, Social Media Entertainment: The New Intersection of Hollywood and Silicon Valley. New York: NYU Press, 2019.
+match | retracted | Wakefield AJ, Murch SH, Anthony A, et al. Ileal-lymphoid-nodular hyperplasia, non-specific colitis, and pervasive developmental disorder in children. Lancet. 1998;351(9103):637-641.
+no-match | - | Hargreaves, P. (2021) The Creator Economy Explained. Journal of Digital Marketing Studies, 14(2), 55-71.
+no-match | - | Okonkwo, L. and Brandt, M. (2020) Algorithmic Taste and the Micro-Influencer. Journal of Platform Studies, 6(1), 12-29.
