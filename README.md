@@ -48,10 +48,23 @@ python3 scripts/check_refs.py --json --file refs.txt # machine-readable
 
 Verdicts: `match`, `match, year differs`, `possible match`, `no match`. A `RETRACTED` status line is printed for withdrawn papers, with the date and the notice's DOI.
 
-Optional environment variables:
+### Optional: an OpenAlex key
 
-- `VERIFY_MAILTO=you@example.org` puts your queries in Crossref's and OpenAlex's "polite pool" (faster, fewer rate limits).
-- `OPENALEX_API_KEY=...` uses a free OpenAlex key. Without one, OpenAlex shares a daily budget among everyone on your network's IP address, which a university campus can exhaust. The script carries on with Crossref and Open Library when that happens, and says so.
+Without a key, OpenAlex shares one daily budget among everyone on your network's IP address. At home that is rarely a problem; on a university campus it can run out by mid-morning. When it does, the checker carries on with Crossref and Open Library and tells you. A key gives you your own budget, ten times the shared one, and costs nothing.
+
+1. Make an account at [openalex.org](https://openalex.org) (about 30 seconds).
+2. Copy your key from [openalex.org/settings/api](https://openalex.org/settings/api).
+3. Tell Claude "here is my OpenAlex key: ..." and it will save it, or run:
+
+```
+python3 scripts/check_refs.py --set-openalex-key YOUR_KEY
+```
+
+The key is kept in `~/.config/verify-citations/config.json`, readable only by you, and sent to OpenAlex as a request header, never in a URL. `python3 scripts/check_refs.py --status` shows what is set. In the Word and PowerPoint add-ins, where no script runs, Claude asks for the key once per conversation and does not store it.
+
+Never put a key inside the skill zip: the zip is what you share.
+
+Also optional: `--set-mailto you@example.org` adds a contact address to your queries, which puts them in Crossref's and OpenAlex's "polite pool" with better rate limits. Environment variables `OPENALEX_API_KEY` and `VERIFY_MAILTO` override the settings file.
 
 ## Tests
 
@@ -59,7 +72,7 @@ Optional environment variables:
 python3 tests/run_tests.py
 ```
 
-Runs thirteen references in five styles, including two invented ones and one retracted paper, and compares the verdicts. Needs internet access.
+Runs thirteen references in five styles, including two invented ones and one retracted paper, and compares the verdicts. Needs internet access. `python3 tests/test_config.py` checks the settings file without touching the network or your real settings.
 
 ## What it deliberately does not do
 

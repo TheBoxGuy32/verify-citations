@@ -15,22 +15,64 @@ Usage:
   python3 check_refs.py --json --file refs.txt   # machine-readable output
 
 Nothing is stored; each reference is sent only to the three public APIs above.
-Set VERIFY_MAILTO=you@example.org to join Crossref and OpenAlex's polite pool (faster, fewer rate limits).
+
+Optional settings (kept in ~/.config/verify-citations/config.json, readable only by you):
+  python3 check_refs.py --set-openalex-key YOUR_KEY   # free key from https://openalex.org/settings/api
+  python3 check_refs.py --set-mailto you@example.org  # Crossref/OpenAlex polite pool
+  python3 check_refs.py --status                      # what is set
+Environment variables OPENALEX_API_KEY and VERIFY_MAILTO override the file.
 Standard library only, so it runs anywhere Python 3 does.
 """
 import json, os, re, sys, time, urllib.error, urllib.parse, urllib.request
 from difflib import SequenceMatcher
 
-MAILTO = os.environ.get("VERIFY_MAILTO", "")          # optional: puts you in Crossref/OpenAlex's polite pool
-OPENALEX_KEY = os.environ.get("OPENALEX_API_KEY", "")  # optional: OpenAlex free key; without one, a daily budget is shared by everyone on your network
-UA = "verify-citations-skill/2.2 (personal citation checker; stdlib urllib" + (f"; mailto:{MAILTO}" if MAILTO else "") + ")"
+CONFIG_PATH = os.path.join(os.path.expanduser("~"), ".config", "verify-citations", "config.json")
+
+def load_config():
+    """Settings file in the user's home folder; environment variables override it."""
+    cfg = {}
+    try:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        print(f"note: could not read {CONFIG_PATH}: {e}", file=sys.stderr)
+    return {
+        "openalex_api_key": os.environ.get("OPENALEX_API_KEY") or cfg.get("openalex_api_key", ""),
+        "mailto": os.environ.get("VERIFY_MAILTO") or cfg.get("mailto", ""),
+    }
+
+def save_config(**changes):
+    cfg = {}
+    try:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
+            cfg = json.load(f)
+    except Exception:
+        pass
+    cfg.update({k: v for k, v in changes.items() if v is not None})
+    os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+    with open(CONFIG_PATH, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=1)
+    try:
+        os.chmod(CONFIG_PATH, 0o600)                       # readable by this user only
+    except Exception:
+        pass
+    return cfg
+
+CONFIG = load_config()
+MAILTO = CONFIG["mailto"]              # optional: puts you in Crossref/OpenAlex's polite pool
+OPENALEX_KEY = CONFIG["openalex_api_key"]  # optional, free: your own OpenAlex budget instead of one shared by your network
+UA = "verify-citations-skill/2.3 (citation checker; stdlib urllib" + (f"; mailto:{MAILTO}" if MAILTO else "") + ")"
 TIMEOUT = 20
 
 def get(url):
     if "openalex.org" in url:
-        if OPENALEX_KEY: url += ("&" if "?" in url else "?") + "api_key=" + urllib.parse.quote(OPENALEX_KEY)
-        elif MAILTO:     url += ("&" if "?" in url else "?") + "mailto=" + urllib.parse.quote(MAILTO)
-    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "application/json"})
+        if MAILTO: url += ("&" if "?" in url else "?") + "mailto=" + urllib.parse.quote(MAILTO)
+    headers = {"User-Agent": UA, "Accept": "application/json"}
+    if OPENALEX_KEY and "openalex.org" in url:
+        headers["Authorization"] = "Bearer " + OPENALEX_KEY   # header, so the key never appears in a URL or log
+    req = urllib.request.Request(url, headers=headers)
     for attempt in range(3):
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
@@ -308,8 +350,24 @@ def show(r):
     for e in r["errors"]:
         print(f"  note: {e}")
 
+def openalex_state(out):
+    if any("OpenAlex" in e for r in out for e in r["errors"]):
+        return "unavailable" + (" (key set)" if OPENALEX_KEY else " (no key: shared network budget used up)")
+    return "used with your key" if OPENALEX_KEY else "used without a key (shared network budget)"
+
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if "--set-openalex-key" in args:
+        key = args[args.index("--set-openalex-key") + 1].strip()
+        save_config(openalex_api_key=key)
+        print(f"OpenAlex key saved to {CONFIG_PATH}"); sys.exit(0)
+    if "--set-mailto" in args:
+        save_config(mailto=args[args.index("--set-mailto") + 1].strip())
+        print(f"Contact email saved to {CONFIG_PATH}"); sys.exit(0)
+    if "--status" in args:
+        print(f"settings file: {CONFIG_PATH} ({'present' if os.path.exists(CONFIG_PATH) else 'not created yet'})")
+        print(f"OpenAlex key:  {'set' if OPENALEX_KEY else 'not set (optional, free: https://openalex.org/settings/api)'}")
+        print(f"contact email: {MAILTO or 'not set (optional)'}"); sys.exit(0)
     as_json = "--json" in args
     if "--file" in args:
         refs = [l.strip() for l in open(args[args.index("--file") + 1], encoding="utf-8") if l.strip()]
@@ -321,7 +379,7 @@ if __name__ == "__main__":
     for ref in refs:
         out.append(lookup(ref)); time.sleep(1.0)
     if as_json:
-        print(json.dumps(out, indent=1, ensure_ascii=False))
+        print(json.dumps({"openalex": openalex_state(out), "results": out}, indent=1, ensure_ascii=False))
     else:
         for r in out: show(r)
         from collections import Counter
@@ -330,6 +388,7 @@ if __name__ == "__main__":
         retracted = sum(any(x.startswith("RETRACTED") for x in r["status"]) for r in out)
         if retracted: line += f"; {retracted} RETRACTED"
         print(line)
-        if any("OpenAlex" in e for r in out for e in r["errors"]):
-            print("note: OpenAlex was unavailable (rate limit or daily budget); Crossref and Open Library were used. "
-                  "A free OpenAlex key in OPENALEX_API_KEY removes the shared daily limit.")
+        print(f"OpenAlex: {openalex_state(out)}")
+        if openalex_state(out).startswith("unavailable") and not OPENALEX_KEY:
+            print("      Crossref and Open Library were used instead. A free OpenAlex key gives you your own budget:\n"
+                  "      get one at https://openalex.org/settings/api, then: python3 check_refs.py --set-openalex-key YOUR_KEY")

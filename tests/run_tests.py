@@ -11,7 +11,7 @@ for line in open(os.path.join(here, "refs.txt"), encoding="utf-8"):
     verdict, status, ref = [x.strip() for x in line.split("|", 2)]
     cases.append((verdict, status, ref))
 out = json.loads(subprocess.run([sys.executable, script, "--json"] + [c[2] for c in cases],
-                                capture_output=True, text=True, check=True).stdout)
+                                capture_output=True, text=True, check=True).stdout)["results"]
 failed = 0
 for (want_v, want_s, ref), r in zip(cases, out):
     got_v = r["verdict"].replace(", ", "-").replace(" ", "-")

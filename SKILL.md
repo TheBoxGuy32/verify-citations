@@ -23,6 +23,15 @@ Scholarly references are checked against three free, public databases, queried d
 
 The only data that leaves the machine is the text of each reference, sent to those three services. Non-scholarly sources (news, reports, websites, datasets) are checked by web search.
 
+## OpenAlex key (optional, free)
+
+OpenAlex shares a daily budget among everyone using it from the same network without a key, so on a university campus it can be used up by mid-morning. Crossref and Open Library still do the whole check when that happens; a key just makes OpenAlex reliable. A key is free: make an account at openalex.org (about 30 seconds) and copy the key from https://openalex.org/settings/api.
+
+- **Where a script can run (Claude Code, Cowork, chat with code execution):** if the user gives you a key, save it once with `python3 scripts/check_refs.py --set-openalex-key THE_KEY`. It goes in a settings file in the user's home folder, readable only by them, and every later run picks it up. `--status` shows whether one is set. The user can also give a contact email for the polite pool with `--set-mailto`.
+- **Where no script can run (Word and PowerPoint add-ins):** ask once per conversation whether the user has an OpenAlex key; if they paste one, add it to each OpenAlex request as an `Authorization: Bearer THE_KEY` header, or as `&api_key=THE_KEY` on the URL if headers are not possible. Do not store it anywhere.
+- Never write a key into the skill files or the zip: those get shared.
+- The report's summary line says whether OpenAlex was used, used with a key, or unavailable. If it was unavailable and there is no key, add one sentence telling the user a free key would fix it, with the link. Say it once, not per reference.
+
 ## Inputs: accept any document, on any surface
 
 This skill runs in claude.ai chat, the PowerPoint add-in, Cowork and Claude Code. Work out WHERE the citations live and load the text with whatever read-only means the current surface offers:
@@ -113,7 +122,7 @@ Respect copyright: quote fewer than about 20 words from any source, in quotation
 
 Present a structured report on screen in chat. Do not modify the document. Structure it as:
 
-- **Summary line**: e.g. "18 citations checked: 12 verified, 3 discrepancies, 2 unverifiable, 1 attribution issue."
+- **Summary line**: e.g. "18 citations checked: 12 verified, 3 discrepancies, 2 unverifiable, 1 attribution issue. Databases: Crossref, Open Library; OpenAlex unavailable (no key)."
 - **Needs attention**: retracted papers first, then fabricated or unverifiable sources, wrong attributions, missing references. One row each: location · citation · finding · basis.
 - **Discrepancies**: real sources with wrong details, plus the corrected reference as the record gives it; and any published correction or expression of concern attached to a cited work.
 - **Consistency**: style and format mismatches.
